@@ -1,4 +1,37 @@
-.venv/
+# --- Python ---
 __pycache__/
-*.pyc
-.idea/claudeCodeEditorTabs.xml
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- IDE / tools (machine-specific) ---
+.idea/
+.vscode/
+.claude/
+*.swp
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Generated data (regenerable with tools/generate.py) ---
+data/puzzles/*
+!data/puzzles/.gitkeep
+
+# --- Experiment artifacts ---
+# Keep the final results/results.csv and results/README.md; per-run raw files stay local.
+results/raw/
+results/*.tmp
+*.log
+
+# --- Scratch ---
+tmp/
+scratch/

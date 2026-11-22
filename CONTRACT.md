@@ -261,7 +261,7 @@ Collected for every run in a `SearchStats` object. Written as JSON only when `--
 | `visited_states` | int | number of nodes **created**: the start node plus every successor produced by the move generator after reverse-move pruning, **including** ones later discarded as duplicates. IDFS: summed over all iterations |
 | `processed_states` | int | number of nodes **expanded** (successor generation was run on them). IDFS: summed over iterations |
 | `max_depth_reached` | int | largest depth (`g`) of any created node |
-| `peak_stored_states` | int | maximum, over the run, of (frontier size + visited/closed/depth-map size). SMA\*: peak stored nodes |
+| `peak_stored_states` | int | maximum, over the run, of the number of **distinct states** held in the algorithm's data structures (frontier ∪ visited/closed/depth map), each state counted once. BFS: size of `visited` (it contains the frontier). DFS/IDFS: size of the depth map. Best-first/A\*: size of the closed set plus open entries not yet closed. SMA\*: stored nodes |
 | `time_ms` | float | wall time of the **search only** (excluding parsing, solvability check and I/O), `time.perf_counter`, rounded to 3 decimals |
 | `max_depth_limit` | int \| null | `--max-depth` used (DFS/IDFS) |
 | `memory_limit` | int \| null | `--memory-limit` used (SMA\*) |
@@ -374,7 +374,7 @@ until the previous one is ✅ Done.
 | # | Milestone | Status |
 |---|-----------|--------|
 | M1 | Foundations: board model, I/O, solvability, stats, CLI, verifier | ✅ Done |
-| M2 | BFS + end-to-end solver + puzzle generator | ⬜ Not started |
+| M2 | BFS + end-to-end solver + puzzle generator | ✅ Done |
 | M3 | DFS + IDFS | ⬜ Not started |
 | M4 | Heuristics + Best-first + A\* | ⬜ Not started |
 | M5 | SMA\* | ⬜ Not started |
@@ -446,26 +446,62 @@ until the previous one is ✅ Done.
 
 ### M2 — BFS + end-to-end solver + puzzle generator
 
-**Status:** ⬜ Not started
+**Status:** ✅ Done (2026-11-22)
 
-**Requirements:**
-- [ ] `fifteen/search/common.py` provides:
-  - a node with parent pointer, move, `g`
-  - path reconstruction
-  - order handling (fixed permutation and random `R` with a seed)
-  - reverse-move pruning
-  - a common strategy signature used by all later strategies
-- [ ] `fifteen/search/bfs.py` implements BFS per section 7.3 and updates all section 8 statistics.
-- [ ] `solver.py -b ORDER` works end-to-end via stdin/stdout, and `--stats` writes valid JSON.
-- [ ] `tools/generate.py` produces all 4×4 puzzles at optimal depths 1..7 (413 files with the
-      section 10.1 naming). Per-depth counts are `2, 4, 10, 24, 54, 107, 212`.
-- [ ] BFS returns a solution of length exactly `d` for **every** generated puzzle, and every solution
-      passes `tools/verify.py`.
-- [ ] Edge cases pass: already-solved board (`0` + empty line), unsolvable board (`-1` + empty
-      line), 2×3, 3×4 and 1×N boards.
-- [ ] The random order `R` with a fixed `--seed` gives identical output across runs.
-- [ ] Verified on Linux (WSL):
-      `./solver.py -b RDUL < data/puzzles/4x4_07_00001.txt`.
+**Completion summary:**
+- **What was built:**
+  - `fifteen/search/common.py`, extended with `Node`, `reconstruct_path`, `make_order` and `expand`
+  - `fifteen/search/bfs.py`, registered in `fifteen/search/__init__.py`
+  - `tools/generate.py`
+  - `tools/__init__.py`, so tests can import the tools
+  - `tests/test_bfs.py`
+  - README section on the generator
+- **How it works (the API later strategies reuse):**
+  - `Node(state, blank, parent, move, g)` uses `__slots__`. `move` is the letter that produced the
+    node (`None` for the root). `reconstruct_path(node)` follows parent pointers.
+  - `make_order(order, seed) -> OrderFn`: call it **once per expansion** to get the move sequence.
+    A fixed order always returns the same tuple. `"R"` returns a new permutation on each call
+    from one `random.Random(seed)` per run.
+  - `expand(board, state, blank, parent_move, moves)` yields `(move, child_state, child_blank)` in
+    the given order. It already applies the legality check **and reverse-move pruning**, so no
+    strategy needs to repeat them.
+  - `bfs.solve`:
+    - records the start in stats (`visited_states = 1`, peak 1) and returns `""` if the start is the goal
+    - keeps a FIFO `deque` of `Node`s and a global `visited` set
+    - for each popped node: `processed += 1`, then for each successor: `visited_states += 1` and
+      `max_depth_reached` updated (duplicates included), and duplicates are skipped
+    - adds new states to `visited` and **goal-tests at generation**
+    - `peak_stored_states = len(visited)`, updated after each expansion
+  - `tools/generate.py`:
+    - `states_by_depth(board, max_depth)` does a full BFS from the goal (no pruning) and returns
+      `{d: [states]}` in a deterministic order (`LRUD`)
+    - `write_puzzles(board, max_depth, out)` deletes the old `{R}x{C}_*.txt` files and writes the
+      new set
+    - `puzzle_text(board, state)` returns the solver input format
+    - CLI: `--rows --cols --max-depth --out` (defaults 4, 4, 7, `data/puzzles`)
+- **Decisions and deviations:**
+  - The section 8 definition of `peak_stored_states` was changed to count each **distinct** state
+    once (frontier + visited would double-count in BFS).
+  - Generated puzzles are **not committed** (`.gitignore`); run `tools/generate.py` after cloning.
+  - `.gitignore` now excludes `.idea/`, `.claude/` and the venv, so the repo holds only source,
+    tests, docs and final results.
+- **How to verify:**
+  - `python3 -m unittest`: 56/56 pass on Windows and WSL Ubuntu 22.04 (Python 3.10.12). The tests
+    include:
+    - BFS gives length exactly `d` on all 413 puzzles × 8 orders, each verified
+    - seeded `R` order
+    - start = goal
+    - 2×3, 3×2, 3×4, 2×4 boards against the exact distances
+    - 1×4 and 3×1 boards
+    - generator counts `2, 4, 10, 24, 54, 107, 212` and the full 2×3 space (360 states)
+  - `python3 tools/generate.py`, then `./solver.py -b RDUL < data/puzzles/4x4_07_00001.txt` gives
+    `7` and `LLLDRRR`.
+  - In WSL, a bash loop ran all 413 puzzles through the CLI and `verify.py`: 0 failures.
+- **Known limitations:**
+  - BFS keeps every visited state in memory, so in Python it is practical up to about depth 15–18
+    on a 4×4 board.
+  - On an unsolvable board BFS would exhaust the space; `solver.py` prevents this with the
+    solvability check.
 
 ---
 
@@ -601,3 +637,6 @@ until the previous one is ✅ Done.
 | 2026-11-22 | Section 7.1: added the single-line (1×N, N×1) solvability rule (the parity rule alone gives wrong answers there). |
 | 2026-11-22 | Section 10.2: verifier exit codes refined (`-1` handling, exit code 2 for malformed input). |
 | 2026-11-22 | **M1 Done**: summary written. Tests 38/38 pass on Windows and WSL Ubuntu 22.04 (Python 3.10.12). |
+| 2026-11-22 | `.gitignore`: repo limited to source, tests, docs and final results; `.idea/`, `.claude/` and generated puzzles excluded. |
+| 2026-11-22 | Section 8: `peak_stored_states` redefined to count distinct states once, with per-strategy definitions. |
+| 2026-11-22 | **M2 Done**: summary written. Tests 56/56 pass on Windows and WSL Ubuntu 22.04. |

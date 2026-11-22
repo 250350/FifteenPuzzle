@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Callable, Dict, Optional
 
 from fifteen.board import Board, State
+from fifteen.search import bfs
 from fifteen.search.common import SearchConfig
 from fifteen.stats import SearchStats
 
@@ -19,7 +20,7 @@ UNINFORMED = ("bfs", "dfs", "idfs")
 INFORMED = ("bf", "astar", "sma")
 
 STRATEGIES: Dict[str, Optional[SolveFn]] = {
-    "bfs": None,    # M2
+    "bfs": bfs.solve,
     "dfs": None,    # M3
     "idfs": None,   # M3
     "bf": None,     # M4

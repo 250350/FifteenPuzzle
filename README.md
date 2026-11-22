@@ -19,6 +19,16 @@ of `LRUD`, or `R` for random); `-h/--bf`, `-a/--astar`, `-s/--sma` take a
 heuristic id (0 zero, 1 Hamming, 2 Manhattan, 3 linear conflict). Move letters
 give the direction the blank moves.
 
+## Test-puzzle generator
+
+```bash
+python3 tools/generate.py        # all 413 4x4 puzzles at optimal depths 1..7 -> data/puzzles/
+python3 tools/generate.py --rows 3 --cols 3 --max-depth 10
+```
+
+Files are named `{R}x{C}_{depth:02d}_{index:05d}.txt`. They are not committed:
+run the generator after cloning.
+
 ## Verifier
 
 ```bash
@@ -31,4 +41,4 @@ python3 tools/verify.py puzzle.txt solution.txt
 python3 -m unittest discover -s tests -v
 ```
 
-_Viewer, generator, experiments and plots: documented as their milestones land._
+_Viewer, experiments and plots: documented as their milestones land._

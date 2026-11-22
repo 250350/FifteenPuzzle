@@ -110,7 +110,9 @@ class SolverIOTest(unittest.TestCase):
             run(SOLVER, ["-b", "R", "--seed", "5", "--stats", str(path)], SOLVABLE)
             data = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual((data["param"], data["seed"]), ("R", 5))
-            self.assertEqual(data["solution_length"], -1)
+            self.assertEqual((data["result"], data["solution_length"], data["solution"]),
+                             ("solved", 1, "R"))
+            self.assertGreater(data["visited_states"], 0)
 
     def test_no_stats_file_without_flag(self):
         with tempfile.TemporaryDirectory() as tmp:

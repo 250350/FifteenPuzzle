@@ -9,8 +9,10 @@ Requirements: Python 3.10+ (standard library only for the solver and viewer).
 ## Solver
 
 ```bash
-python3 solver.py -b RDUL < puzzle.txt              # BFS, order R,D,U,L
-python3 solver.py -a 2 --stats out.json < puzzle.txt  # A* with Manhattan, stats to JSON
+python3 solver.py -b RDUL < puzzle.txt                # BFS, order R,D,U,L
+python3 solver.py -d LUDR --max-depth 25 < puzzle.txt  # DFS with depth limit 25 (default 20)
+python3 solver.py -i R --seed 7 < puzzle.txt           # IDFS, random order, reproducible
+python3 solver.py -a 2 --stats out.json < puzzle.txt   # A* with Manhattan, stats to JSON
 python3 solver.py --help
 ```
 
@@ -38,7 +40,8 @@ python3 tools/verify.py puzzle.txt solution.txt
 ## Tests
 
 ```bash
-python3 -m unittest discover -s tests -v
+python3 -m unittest                      # fast suite (~15 s)
+FIFTEEN_SLOW=1 python3 -m unittest       # + full DFS run with the default limit (~1 h)
 ```
 
 _Viewer, experiments and plots: documented as their milestones land._

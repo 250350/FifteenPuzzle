@@ -375,7 +375,7 @@ until the previous one is ✅ Done.
 |---|-----------|--------|
 | M1 | Foundations: board model, I/O, solvability, stats, CLI, verifier | ✅ Done |
 | M2 | BFS + end-to-end solver + puzzle generator | ✅ Done |
-| M3 | DFS + IDFS | ⬜ Not started |
+| M3 | DFS + IDFS | ✅ Done |
 | M4 | Heuristics + Best-first + A\* | ⬜ Not started |
 | M5 | SMA\* | ⬜ Not started |
 | M6 | Viewer | ⬜ Not started |
@@ -507,23 +507,62 @@ until the previous one is ✅ Done.
 
 ### M3 — DFS + IDFS
 
-**Status:** ⬜ Not started
+**Status:** ✅ Done (2026-11-22)
 
-**Requirements:**
-- [ ] `fifteen/search/dfs.py` follows section 7.3:
-  - explicit stack (no recursion)
-  - depth-aware visited map
-  - `--max-depth` respected
-  - successors processed in the given order
-- [ ] `fifteen/search/idfs.py` follows section 7.3: limits `0..max_depth`, a fresh map per
-      iteration, and statistics accumulated over iterations.
-- [ ] DFS finds a valid solution (passing `verify.py`) of length ≤ `max_depth` for every generated
-      puzzle, for all 8 orders from section 10.3.
-- [ ] IDFS returns **optimal** length `d` for every generated puzzle, for all 8 orders.
-- [ ] A puzzle whose optimal depth is greater than `--max-depth` returns `-1` (tested with a small
-      `--max-depth`).
-- [ ] A test confirms that the depth-aware map re-expands a state reached at a shallower depth.
-- [ ] Edge cases from M2 pass for both strategies.
+**Completion summary:**
+- **What was built:**
+  - `fifteen/search/dfs.py` and `fifteen/search/idfs.py`, both registered in
+    `fifteen/search/__init__.py`
+  - `tests/test_dfs_idfs.py`
+  - README examples, plus a note on the slow tests
+- **How it works:**
+  - `dfs.depth_limited_search(board, start, limit, next_order, stats) -> (moves | None, cutoff)` is
+    the shared core. The caller has already goal-tested `start`.
+    - It keeps an explicit stack of `Node`s and a depth map `best: state -> smallest depth`.
+    - A popped node with `best[state] < node.g` is stale and gets skipped.
+    - A successor is accepted only if it is new or reached at a **strictly smaller** depth. It is
+      **goal-tested at generation**.
+    - Successors at depth `limit` are goal-tested but never pushed (this sets `cutoff = True`).
+    - Successors are pushed in reverse, so they are **processed in the given order**.
+    - `peak_stored_states = len(best)`.
+  - `dfs.solve`: handles start = goal (`""`), returns `None` when `max_depth < 1`, and otherwise
+    makes one call with `limit = max_depth`.
+  - `idfs.solve` runs limits `1..max_depth` with a fresh map each time (limit 0 is just the goal
+    test of the start).
+    - It uses **one** `OrderFn`/RNG for the whole run, so a seeded `R` order is reproducible.
+    - Counters are summed; the start node counts once per iteration in `visited_states`.
+    - `peak_stored_states` is the largest map of any iteration.
+    - It stops early when an iteration had no cutoff (the space is exhausted).
+- **Decisions and deviations:**
+  - Nodes at the limit are not pushed at all, instead of being pushed and then not expanded.
+    The behaviour is the same and it saves memory.
+  - The IDFS early stop on "no cutoff" is an addition; it only matters for tiny or unsolvable
+    spaces.
+  - The full default-limit DFS check is the opt-in test `FIFTEEN_SLOW=1` (it takes about 45 min),
+    so the normal suite stays fast.
+- **How to verify:**
+  - `python3 -m unittest`: 71 pass and 1 is skipped (the slow test), on Windows and WSL Ubuntu
+    22.04. The suite covers:
+    - IDFS optimal on 413 × 8 orders, each verified
+    - DFS with `max_depth = d` (a tight limit) finds a length-`d` solution on 413 × 8, which shows
+      the depth map makes it complete
+    - a limit that is too small returns `-1` for both strategies
+    - an instrumented re-expansion test, plus cases where a plain visited set fails but our DFS
+      succeeds
+    - successor order checked with a spy on `expand`
+    - start = goal, `max_depth 0`, 1×4, 3×1, 2×3, 3×4 and 2×4 boards
+    - a seeded `R` order is reproducible
+    - CLI checks
+  - `FIFTEEN_SLOW=1 python3 -m unittest tests.test_dfs_idfs.DfsTest.test_default_limit_all_puzzles_all_orders`
+    passed on Ubuntu in 2606 s: DFS with limit 20 gives a valid solution of length ≤ 20 for every
+    puzzle × 8 orders.
+- **Known limitations and observations (for the report):**
+  - DFS with limit 20 on the depth 1–7 set, order RDUL, Python 3.14:
+    - about 386k visited states on average, 2.7M at most
+    - mean solution length 17.3, against 6.1 optimal
+    - up to about 9 s per puzzle
+    
+    IDFS needs about 500 visited states on average. DFS will dominate the run time in M7.
 
 ---
 
@@ -640,3 +679,4 @@ until the previous one is ✅ Done.
 | 2026-11-22 | `.gitignore`: repo limited to source, tests, docs and final results; `.idea/`, `.claude/` and generated puzzles excluded. |
 | 2026-11-22 | Section 8: `peak_stored_states` redefined to count distinct states once, with per-strategy definitions. |
 | 2026-11-22 | **M2 Done**: summary written. Tests 56/56 pass on Windows and WSL Ubuntu 22.04. |
+| 2026-11-22 | **M3 Done**: summary written. Tests 71 pass (+1 slow test passed separately) on Windows and WSL Ubuntu 22.04. |

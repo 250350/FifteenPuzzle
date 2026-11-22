@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Callable, Dict, Optional
 
 from fifteen.board import Board, State
-from fifteen.search import bfs, dfs, idfs
+from fifteen.search import astar, best_first, bfs, dfs, idfs
 from fifteen.search.common import SearchConfig
 from fifteen.stats import SearchStats
 
@@ -23,8 +23,8 @@ STRATEGIES: Dict[str, Optional[SolveFn]] = {
     "bfs": bfs.solve,
     "dfs": dfs.solve,
     "idfs": idfs.solve,
-    "bf": None,     # M4
-    "astar": None,  # M4
+    "bf": best_first.solve,
+    "astar": astar.solve,
     "sma": None,    # M5
 }
 

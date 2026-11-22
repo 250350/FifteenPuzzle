@@ -376,7 +376,7 @@ until the previous one is ✅ Done.
 | M1 | Foundations: board model, I/O, solvability, stats, CLI, verifier | ✅ Done |
 | M2 | BFS + end-to-end solver + puzzle generator | ✅ Done |
 | M3 | DFS + IDFS | ✅ Done |
-| M4 | Heuristics + Best-first + A\* | ⬜ Not started |
+| M4 | Heuristics + Best-first + A\* | ✅ Done |
 | M5 | SMA\* | ⬜ Not started |
 | M6 | Viewer | ⬜ Not started |
 | M7 | Batch runner + full experiment run | ⬜ Not started |
@@ -568,22 +568,65 @@ until the previous one is ✅ Done.
 
 ### M4 — Heuristics + Best-first + A\*
 
-**Status:** ⬜ Not started
+**Status:** ✅ Done (2026-11-22)
 
-**Requirements:**
-- [ ] `fifteen/heuristics.py` implements ids `0..3` exactly as in section 5.3 for any R×C, with the
-      blank excluded.
-- [ ] Unit tests check hand-computed values for every heuristic, plus `h(goal) = 0`.
-- [ ] An admissibility check passes: for every generated puzzle, `h(start) ≤ d` for all ids, and
-      `h0 ≤ h1`, `h2 ≤ h3`.
-- [ ] `fifteen/search/best_first.py` (`f = h`) and `fifteen/search/astar.py` (`f = g + h`) follow
-      sections 7.2–7.3 (tie-breaking, lazy deletion, re-opening for A\*).
-- [ ] A\* returns **optimal** length `d` for every generated puzzle with **each** heuristic `0..3`.
-- [ ] Best-first returns a valid (verified) solution for every generated puzzle with heuristics
-      `1..3`. With `h = 0` it terminates correctly (time-limited test).
-- [ ] On the depth-7 puzzles, A\* processes fewer states with h3 ≤ h2 ≤ h1 ≤ h0 on average
-      (a sanity check of heuristic strength).
-- [ ] Edge cases from M2 pass for both strategies.
+**Completion summary:**
+- **What was built:**
+  - `fifteen/heuristics.py`
+  - `fifteen/search/best_first.py` and `fifteen/search/astar.py`, both registered in
+    `fifteen/search/__init__.py`
+  - `tests/test_informed.py`
+- **How it works:**
+  - `make_heuristic(hid, board) -> Callable[[State], int]` returns a function with the board's
+    tables precomputed. `HEURISTIC_NAMES = {0: zero, 1: hamming, 2: manhattan, 3: linear_conflict}`.
+    - Manhattan uses a `table[tile][cell]` distance lookup.
+    - Linear conflict = Manhattan + 2 × Σ over rows and columns of `removals_to_sort(line)`, where
+      `line` lists the goal columns (or goal rows) of the tiles already in their goal row (or
+      column), and `removals_to_sort = len − LIS`, computed with `bisect`.
+    - All heuristics ignore the blank. SMA\* in M5 reuses `make_heuristic`.
+  - `best_first.solve`:
+    - heap of `(h, h, counter, Node)`, which gives the contract's tie-break `(f, h, FIFO)` with
+      `f = h`
+    - one `seen` set (closed + open), so each state is pushed at most once
+    - goal test at expansion
+    - `peak_stored_states = len(seen)`
+  - `astar.solve`:
+    - heap of `(g+h, h, counter, Node)` and a `best_g` map
+    - a successor is pushed only if it improves `best_g`, which also re-opens closed states
+    - a popped entry with `g > best_g[state]` is stale and skipped (lazy deletion)
+    - goal test at expansion
+    - `peak_stored_states = len(best_g)`
+  - Both use the fixed successor order `LRUD` and the shared `expand` (reverse-move pruning
+    included).
+- **Decisions and deviations:**
+  - No closed set in A\*: `best_g` plus lazy deletion is equivalent and simpler.
+  - `heuristic=None` falls back to `h0`. This is only possible when the API is called directly;
+    the CLI always passes an id.
+- **How to verify:**
+  - `python3 -m unittest`: 90 pass and 1 is skipped (the slow DFS test), on Windows and WSL Ubuntu
+    22.04. The suite covers:
+    - hand-computed values for every heuristic: row, column and double conflicts, a fully reversed
+      row, the blank ignored, `h(goal) = 0` on 5 board sizes
+    - admissibility and ordering `h0 ≤ h1 ≤ h2 ≤ h3 ≤ d` on the 413 puzzles, the **full** 2×3, 3×2
+      and 2×2 spaces, and 3×3 up to depth 14
+    - A\* optimal on 413 × h0..h3, each verified
+    - A\* optimal on 2×3, 3×2, 3×3 and 3×4 boards
+    - on deeper random puzzles, A\* matches BFS lengths (3×3) and h2 and h3 agree (4×4)
+    - Best-first valid on 413 × h1..h3; with h0 it finishes the depth-7 set in < 60 s
+    - edge cases, an exhausted 2×2 space, CLI `-a` and `-h` with every id
+- **Known limitations and observations (for the report):**
+  - On the depth 1–7 set, the mean number of states A\* processes at depth 7 is:
+
+    | h0 | h1 | h2 | h3 |
+    |---|---|---|---|
+    | 414.1 | 8.7 | 7.3 | 7.3 |
+
+  - Linear conflict does not beat Manhattan at these shallow depths. Its advantage appears only on
+    deeper puzzles. **Recommendation for M7:** add a deeper puzzle set for the informed
+    strategies.
+  - Best-first with h1 gave 411/413 optimal solutions (worst length 25); with h2 and h3 all 413
+    were optimal on this set.
+  - With h0, Best-first behaves like BFS (FIFO tie-break) and A\* like uniform-cost search.
 
 ---
 
@@ -680,3 +723,4 @@ until the previous one is ✅ Done.
 | 2026-11-22 | Section 8: `peak_stored_states` redefined to count distinct states once, with per-strategy definitions. |
 | 2026-11-22 | **M2 Done**: summary written. Tests 56/56 pass on Windows and WSL Ubuntu 22.04. |
 | 2026-11-22 | **M3 Done**: summary written. Tests 71 pass (+1 slow test passed separately) on Windows and WSL Ubuntu 22.04. |
+| 2026-11-22 | **M4 Done**: summary written. Tests 90 pass (+1 slow skipped) on Windows and WSL Ubuntu 22.04. |

@@ -377,8 +377,8 @@ until the previous one is ✅ Done.
 | M2 | BFS + end-to-end solver + puzzle generator | ✅ Done |
 | M3 | DFS + IDFS | ✅ Done |
 | M4 | Heuristics + Best-first + A\* | ✅ Done |
-| M5 | SMA\* | ⬜ Not started |
-| M6 | Viewer | ⬜ Not started |
+| M5 | SMA\* | ✅ Done |
+| M6 | Viewer | ✅ Done |
 | M7 | Batch runner + full experiment run | ⬜ Not started |
 | M8 | Plots + report + final acceptance | ⬜ Not started |
 
@@ -632,43 +632,61 @@ until the previous one is ✅ Done.
 
 ### M5 — SMA\*
 
-**Status:** ⬜ Not started
+**Status:** ✅ Done (2026-11-23)
 
-**Requirements:**
-- [ ] `fifteen/search/sma_star.py` follows section 7.3 (AIMA version):
-  - one successor generated at a time
-  - the stored-node count never exceeds `--memory-limit`
-  - the shallowest highest-`f` leaf is dropped
-  - forgotten `f` is stored in the parent
-  - `f` is backed up to ancestors
-  - a non-goal node at depth `memory_limit - 1` gets `f = ∞`
-- [ ] A test with instrumentation confirms that `peak_stored_states ≤ memory_limit` on every run.
-- [ ] With the default limit, SMA\* returns **optimal** length `d` for every generated puzzle with
-      heuristics `0..3`.
-- [ ] With a small limit (e.g. 50–500 nodes), SMA\* still returns valid solutions where they fit,
-      returns `-1` when the solution can't fit, and never crashes or loops forever.
-- [ ] Edge cases from M2 pass.
+**Completion summary:**
+- **What was built**
+  - `fifteen/search/sma_star.py` and its registry entry, `tests/test_sma_star.py`, and README usage.
+- **How it works**
+  - `sma_star.solve(board, start, config, stats)` uses `SearchConfig`, `make_heuristic` and
+    `SearchStats`. It selects by the lowest `f`, generates one successor at a time and tests
+    for the goal on selection. New moves follow `LRUD` with reverse-move pruning.
+  - At capacity it discards the highest-`f`, shallowest leaf before allocating its replacement.
+    The parent remembers the move and its `f`. The minimum of retained scores, forgotten scores
+    and the bound for untried moves is backed up to the ancestors. Replaying a forgotten move
+    rebuilds its child with `f = max(g + h, remembered_f)`.
+- **Decisions and deviations**
+  - The resident frontier uses `(f, h, FIFO)`. At equal bounds resident work precedes replay.
+    Forgotten moves at equal bounds are replayed deepest first. Eviction breaks remaining ties
+    by dropping the newest leaf.
+  - Path cycles and branches that cannot reach a goal within `memory_limit - 1` moves score infinity.
+- **How to verify**
+  - `python3 -m unittest` passes 96 tests on Windows and WSL Ubuntu 22.04 (Python 3.10.12 on WSL),
+    with the optional slow DFS test skipped. SMA\* finds verified optimal lengths for all 413 boards
+    with heuristics 0–3 at both 100000 and 50 nodes. The tests count live node objects at allocation.
+  - `printf '2 2\n2 0\n1 3\n' | python3 solver.py -s 0 --memory-limit 4` gives `3` and `LDR`
+    on WSL Ubuntu. Repeating with `--memory-limit 3` gives `-1` and an empty line.
+- **Known limitations**
+  - Tight node limits can increase running time through repeated successor generation.
 
 ---
 
 ### M6 — Viewer
 
-**Status:** ⬜ Not started
+**Status:** ✅ Done (2026-11-23)
 
-**Requirements:**
-- [ ] `viewer.py` follows section 9:
-  - opens files from the CLI arguments and via a File → Open dialog
-  - draws R×C boards of any size
-  - Prev/Next/First/Last, slider and numeric jump
-  - `k / n` + current move display
-  - autoplay with speed control
-  - keyboard shortcuts
-- [ ] It uses `fifteen.board` for moves (no duplicated move logic).
-- [ ] It handles and clearly reports: `-1` (no solution), an illegal move, a length mismatch, and a
-      final state ≠ goal, without crashing.
-- [ ] Tested manually on a 4×4 BFS solution, a long DFS solution, a non-square board, and an invalid
-      solution file.
-- [ ] It runs on Windows (and on Linux if `python3-tk` is installed).
+**Completion summary:**
+- **What was built**
+  - `viewer.py`, `fifteen/replay.py`, `tests/test_replay.py`, and README usage and verification commands.
+- **How it works**
+  - `load_replay(puzzle_file, solution_file) -> Replay` uses the shared parsers and `Board.apply`.
+    It checks the goal and stores the starting board at index zero. `-1` keeps the starting board
+    with a **No solution** status. Errors are shown in the viewer.
+  - The Tk canvas renders the selected state on a scrollable R×C board. Buttons, slider, numeric
+    entry and keyboard shortcuts share the current step. A Tk timer drives adjustable autoplay.
+- **Decisions and deviations**
+  - A failed open preserves the loaded replay. The numeric entry retains its cursor keys while
+    editing. Playing at the last step restarts from step 0.
+- **How to verify**
+  - `python3 -m unittest` passes 102 tests on Windows and WSL Ubuntu 22.04, with the optional slow
+    DFS test skipped. The Linux solver also passed a stdin/stdout smoke test.
+  - Follow [Viewer verification](README.md#viewer-verification) to recreate the file pairs.
+    Opened on Windows with Tk 8.6: 7-step 4×4 BFS, 19-step DFS, and 5-step 2×3 through File → Open.
+    Checked navigation, shortcuts, autoplay at two speeds, and error messages for illegal moves,
+    length mismatch, wrong final state and malformed puzzle, as well as the `-1` display.
+- **Known limitations**
+  - Direct jumps use one cached board state per step. Linux GUI execution was unverified because
+    `python3-tk` was absent in WSL.
 
 ---
 
@@ -724,3 +742,5 @@ until the previous one is ✅ Done.
 | 2026-11-22 | **M2 Done**: summary written. Tests 56/56 pass on Windows and WSL Ubuntu 22.04. |
 | 2026-11-22 | **M3 Done**: summary written. Tests 71 pass (+1 slow test passed separately) on Windows and WSL Ubuntu 22.04. |
 | 2026-11-22 | **M4 Done**: summary written. Tests 90 pass (+1 slow skipped) on Windows and WSL Ubuntu 22.04. |
+| 2026-11-23 | **M5 Done**. Tests 96 pass (+1 slow skipped) on Windows and WSL Ubuntu 22.04. SMA\* matches all 413 optimal distances for each heuristic at both tested limits. |
+| 2026-11-23 | **M6 Done**. Viewer checked in open Windows Tk windows. Tests 102 pass (+1 slow skipped) on Windows and WSL Ubuntu 22.04. |

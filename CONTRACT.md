@@ -379,8 +379,8 @@ until the previous one is ✅ Done.
 | M4 | Heuristics + Best-first + A\* | ✅ Done |
 | M5 | SMA\* | ✅ Done |
 | M6 | Viewer | ✅ Done |
-| M7 | Batch runner + full experiment run | ⬜ Not started |
-| M8 | Plots + report + final acceptance | ⬜ Not started |
+| M7 | Batch runner + full experiment run | ✅ Done |
+| M8 | Plots + report + final acceptance | ✅ Done |
 
 ---
 
@@ -692,38 +692,64 @@ until the previous one is ✅ Done.
 
 ### M7 — Batch runner + full experiment run
 
-**Status:** ⬜ Not started
+**Status:** ✅ Done (2026-11-23)
 
-**Requirements:**
-- [ ] `tools/run_experiments.py` follows section 10.3:
-  - subprocess calls through stdin/stdout with `--stats`
-  - per-run timeout (default 60 s)
-  - verification of every solved result
-  - CSV with exactly the section 10.3 columns
-- [ ] The runner is **resumable** (already-finished rows are skipped on restart) and configurable
-      (subset of strategies/params/puzzles via CLI options), so a crash doesn't lose results.
-- [ ] The full default matrix has been run on all 413 puzzles on **one machine**, and
-      `results/results.csv` is complete.
-- [ ] Every solved row has `verified = true`, and timeouts/failures are counted and listed.
-- [ ] The machine spec, OS, Python version and date of the run are recorded in
-      `results/README.md`.
+**Completion summary:**
+- **What was built**
+  - `tools/run_experiments.py`, `tests/test_experiments.py`, the full CSV and its metadata
+    in `results/`, and the [measurement record](results/README.md).
+- **How it works**
+  - The runner starts one fresh solver subprocess per key, passes the board via stdin and
+    reads stdout and `--stats`. It verifies returned solutions with `tools.verify.verify_text`,
+    applies the timeout per attempt, and flushes each finished row to disk.
+  - Repeatable CLI filters select boards, strategies and parameters. An output lock guards
+    the CSV, and its sidecar checks the exact matrix, inputs, code, environment and settings
+    before resuming. Complete rows are retained. An interrupted final write is discarded.
+- **Decisions and deviations**
+  - `timeout`, `error` and `invalid` identify distinct failures and have empty search metrics.
+    Random-order trials use one recorded seed per output file.
+- **How to verify**
+  - Run `python3 tools/generate.py` and `python3 tools/run_experiments.py`.
+    A separate preflight exercised all six strategies, a forced timeout, and recovery from
+    5 committed rows to all 72 expected keys. Changed limits and timeout were refused.
+  - The full WSL run took 32 min 7 s. Independent validation confirmed the Section 10.3
+    header and exactly 14868 unique keys with no missing or duplicate rows. Every row is
+    `solved` with `verified=true`. There were zero timeouts or other failures.
+  - `python3 -m unittest` passes 105 tests on Windows and WSL Ubuntu 22.04 with one optional
+    slow DFS test skipped.
+- **Known limitations**
+  - `time_ms` measures solver search time. The benchmark log gives total elapsed time.
 
 ---
 
 ### M8 — Plots + report + final acceptance
 
-**Status:** ⬜ Not started
+**Status:** ✅ Done (2026-11-23)
 
-**Requirements:**
-- [ ] `tools/plot.py` produces all charts from section 10.4 out of `results/results.csv` into
-      `report/figures/`, regenerable with one command.
-- [ ] The report follows the section 11 structure, discusses every strategy, order and heuristic,
-      and all figures come from the actual CSV.
-- [ ] Final acceptance:
-  - all unit tests pass on Linux
-  - `./solver.py` works on Linux via stdin/stdout for every strategy
-  - the viewer replays saved solutions
-  - `README.md` documents how to run the solver, viewer, generator, experiments and plots
+**Completion summary:**
+- **What was built**
+  - `tools/plot.py`, `requirements-tools.txt`, `report/report.md` and 24 figure files.
+    Updated the root README and recorded executable mode `100755` for `solver.py` in Git.
+- **How it works**
+  - Reads the verified M7 CSV. For each of six metrics, plots arithmetic means at each optimal
+    depth by strategy and by parameter within a strategy. Both layouts are exported as PNG and
+    vector PDF. The English report follows section 11 and links the complete figure set.
+- **Decisions and deviations**
+  - Search time is averaged per attempt and plotted on a log scale, along with the state and
+    node counts. Zeros enter the mean unchanged. A zero mean on a log axis uses a hollow triangle
+    below the smallest positive mean. The M7 data contain no zero means on those axes.
+- **How to verify**
+  - After installing `requirements-tools.txt`, run `python3 tools/plot.py` from the repo root.
+    Regeneration produced all 24 files on Windows and Ubuntu 22.04 under WSL. Independent
+    aggregation verified 1764 means against the original CSV. Its SHA-256 was unchanged.
+  - `git ls-files --stage -- solver.py` shows `100755`. In a native WSL checkout, invoked
+    `./solver.py` through stdin/stdout with `-b RDUL`, `-d RDUL`, `-i RDUL`, `-h 2`, `-a 2` and
+    `-s 2` on `data/puzzles/4x4_07_00001.txt`. The verifier accepted all six saved outputs.
+  - `python3 -m unittest` on WSL passed 105 tests, with the optional slow DFS test skipped.
+    The WSLg viewer played the saved BFS solution from step 0 to the goal at step 7.
+- **Known limitations**
+  - The report's empirical comparisons cover the 413 boards at depths 1–7 and the limits
+    recorded in M7. The CSV measures algorithmic storage counts.
 
 ---
 
@@ -744,3 +770,5 @@ until the previous one is ✅ Done.
 | 2026-11-22 | **M4 Done**: summary written. Tests 90 pass (+1 slow skipped) on Windows and WSL Ubuntu 22.04. |
 | 2026-11-23 | **M5 Done**. Tests 96 pass (+1 slow skipped) on Windows and WSL Ubuntu 22.04. SMA\* matches all 413 optimal distances for each heuristic at both tested limits. |
 | 2026-11-23 | **M6 Done**. Viewer checked in open Windows Tk windows. Tests 102 pass (+1 slow skipped) on Windows and WSL Ubuntu 22.04. |
+| 2026-11-23 | **M7 Done**. The WSL benchmark completed all 14868 unique combinations with every solution verified. Tests 105 pass (+1 slow skipped) on Windows and WSL Ubuntu 22.04. |
+| 2026-11-23 | **M8 Done**. All figures and the report were checked against the M7 CSV. Verified the six executable Linux solver invocations, the WSL test suite and saved solution playback in WSLg. |

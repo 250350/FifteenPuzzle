@@ -12,6 +12,7 @@ Requirements: Python 3.10+ (standard library only for the solver and viewer).
 python3 solver.py -b RDUL < puzzle.txt                # BFS, order R,D,U,L
 python3 solver.py -d LUDR --max-depth 25 < puzzle.txt  # DFS with depth limit 25 (default 20)
 python3 solver.py -i R --seed 7 < puzzle.txt           # IDFS, random order, reproducible
+python3 solver.py -h 2 < puzzle.txt                    # greedy Best-first with Manhattan
 python3 solver.py -a 2 --stats out.json < puzzle.txt   # A* with Manhattan, stats to JSON
 python3 solver.py -s 2 --memory-limit 50 < puzzle.txt # SMA* with Manhattan and 50 nodes
 python3 solver.py --help
@@ -21,6 +22,9 @@ Strategy flags: `-b/--bfs`, `-d/--dfs`, `-i/--idfs` take an order (a permutation
 of `LRUD`, or `R` for random); `-h/--bf`, `-a/--astar`, `-s/--sma` take a
 heuristic id (0 zero, 1 Hamming, 2 Manhattan, 3 linear conflict). Move letters
 give the direction the blank moves.
+
+On Linux, the executable entry point also works directly as
+`./solver.py -b RDUL < puzzle.txt`.
 
 ### SMA* memory and restoration
 
@@ -116,4 +120,60 @@ python3 -m unittest                      # fast suite (~15 s)
 FIFTEEN_SLOW=1 python3 -m unittest       # + full DFS run with the default limit (~1 h)
 ```
 
-_Experiments and plots: documented as their milestones land._
+## Experiments
+
+```bash
+python3 tools/generate.py
+python3 tools/run_experiments.py
+python3 tools/run_experiments.py --puzzle '4x4_01_*.txt' --param RDUL --param 2 \
+  --output tmp/m7/smoke.csv
+python3 tools/run_experiments.py --puzzle '4x4_01_00001.txt' --strategy bfs --param RDUL \
+  --timeout 0.001 --output tmp/m7/timeout-check.csv
+python3 tools/run_experiments.py --strategy sma --param 3 --timeout 30 \
+  --memory-limit 50 --output tmp/m7/sma-small.csv
+```
+
+The default run covers 413 boards and 36 strategy/parameter pairs. The runner
+sends each puzzle to a fresh solver process, reads its stdout and statistics,
+and checks returned solutions with the verifier. Each finished row is flushed
+to disk. Rerun the same command after the previous process exits to resume.
+The runner keeps complete rows and discards an unterminated final write.
+
+`--puzzle`, `--strategy` and `--param` are repeatable. Puzzle patterns match file
+names in `--puzzles-dir`. Orders apply to BFS/DFS/IDFS and heuristic IDs apply
+to Best-first/A*/SMA*. For order `R`, set `--seed` and use a separate output for
+each seed.
+
+Keep the `.csv.meta.json` file beside its CSV. The runner checks the selected
+matrix, puzzle contents, code, environment, timeout and solver limits before
+appending. A different configuration requires a different `--output`.
+
+`timeout` records an expired deadline, `error` an execution or statistics
+failure, and `invalid` a rejected solution. Those rows have empty search
+metrics. Only accepted solutions have `verified=true`.
+
+The [recorded run](results/README.md) documents the full matrix, environment,
+timings and validation of `results/results.csv`.
+
+## Plots and technical report
+
+Install the plot dependency once with
+`python3 -m pip install -r requirements-tools.txt`. Regenerate all figures
+from the repository root with one command.
+
+```bash
+python3 tools/plot.py
+```
+
+The script reads `results/results.csv` and writes the strategy and parameter
+comparisons for all six metrics as PNG and PDF in `report/figures/`.
+All means are arithmetic means of verified, solved attempts at each optimal
+depth. Each strategy point pools all of its configurations at that depth.
+Each order or heuristic point uses one configuration. Length and depth are in
+moves, search time is in milliseconds per attempt, and storage is in states
+or SMA* nodes. Node counts and search time use log axes. Zero counts enter
+the means unchanged. A zero mean on a log axis is drawn as a hollow triangle
+below the smallest positive mean.
+
+Use `--csv PATH` and `--out DIRECTORY` for a separate input or output.
+The [technical report](report/report.md) includes the full figure index.

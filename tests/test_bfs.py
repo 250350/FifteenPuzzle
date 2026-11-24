@@ -50,7 +50,7 @@ class CommonHelpersTest(unittest.TestCase):
         moves = [m for m, _, _ in expand(board, state, 4, "R", "DULR")]  # came by R -> no L
         self.assertEqual(moves, ["D", "U", "R"])
         corner = [m for m, _, _ in expand(board, board.goal, 8, None, "LRUD")]
-        self.assertEqual(corner, ["L", "U"])
+        self.assertEqual(corner, ["R", "D"])
         for move, child, blank in expand(board, state, 4, None, "LRUD"):
             self.assertEqual((child, blank), board.apply(state, 4, move))
 
@@ -137,10 +137,10 @@ class BfsEdgeCasesTest(unittest.TestCase):
     def test_single_line_boards(self):
         board = Board(1, 4)
         moves, _ = run_bfs(board, (1, 0, 2, 3))
-        self.assertEqual(moves, "RR")
+        self.assertEqual(moves, "LL")
         board = Board(3, 1)
         moves, _ = run_bfs(board, (0, 1, 2))
-        self.assertEqual(moves, "DD")
+        self.assertEqual(moves, "UU")
 
     def test_exhausted_search_returns_none(self):
         # BFS is only called on solvable boards, but it must still terminate

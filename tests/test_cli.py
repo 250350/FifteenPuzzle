@@ -111,7 +111,7 @@ class SolverIOTest(unittest.TestCase):
             data = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual((data["param"], data["seed"]), ("R", 5))
             self.assertEqual((data["result"], data["solution_length"], data["solution"]),
-                             ("solved", 1, "R"))
+                             ("solved", 1, "L"))
             self.assertGreater(data["visited_states"], 0)
 
     def test_no_stats_file_without_flag(self):
@@ -131,13 +131,13 @@ class VerifyTest(unittest.TestCase):
             self.assertEqual(proc.returncode, expected_code, msg=proc.stdout + proc.stderr)
 
     def test_cases(self):
-        self.check(SOLVABLE, "1\nR\n", 0)          # valid
-        self.check(SOLVABLE, "3\nRLR\n", 0)        # valid, non-optimal
-        self.check(SOLVABLE, "1\nL\n", 1)          # goal not reached
-        self.check(SOLVABLE, "2\nRR\n", 1)         # illegal move
+        self.check(SOLVABLE, "1\nL\n", 0)          # valid: tile 15 slides left
+        self.check(SOLVABLE, "3\nLRL\n", 0)        # valid, non-optimal
+        self.check(SOLVABLE, "1\nR\n", 1)          # goal not reached
+        self.check(SOLVABLE, "2\nLL\n", 1)         # illegal move
         self.check(SOLVABLE, "-1\n\n", 1)          # -1 for a solvable puzzle
         self.check(UNSOLVABLE, "-1\n\n", 0)        # -1 for an unsolvable puzzle
-        self.check(SOLVABLE, "2\nR\n", 2)          # length mismatch -> malformed
+        self.check(SOLVABLE, "2\nL\n", 2)          # length mismatch -> malformed
         self.check("2 2\n1 1 2 0\n", "0\n\n", 2)   # malformed puzzle
 
     def test_usage(self):

@@ -72,21 +72,21 @@ class SmaStarTest(unittest.TestCase):
                           if not n.children and n.serial != expanding)
             self.assertIs(leaf, max(candidates, key=lambda n: (n.f, -n.g, n.serial)))
             forget(search, serial)
-            if reconstruct_path(leaf) == "LD":
+            if reconstruct_path(leaf) == "RU":
                 self.assertNotIn(serial, search.nodes)
-                self.assertNotIn("D", parent.children)
-                self.assertEqual(parent.forgotten["D"], 3)
+                self.assertNotIn("U", parent.children)
+                self.assertEqual(parent.forgotten["U"], 3)
                 self.assertEqual(parent.f, 3)
                 events.append(("forgotten", serial))
 
         def record_restoration(search, node):
             nonlocal expanding
             expanding = node.serial
-            old_f = node.forgotten.get("D")
+            old_f = node.forgotten.get("U")
             generate(search, node)
-            if old_f is not None and reconstruct_path(node) == "L" and "D" in node.children:
-                child = search.nodes[node.children["D"]]
-                self.assertNotIn("D", node.forgotten)
+            if old_f is not None and reconstruct_path(node) == "R" and "U" in node.children:
+                child = search.nodes[node.children["U"]]
+                self.assertNotIn("U", node.forgotten)
                 self.assertEqual(child.f, old_f)
                 self.assertGreater(child.f, child.g)  # h0, so the fresh estimate would be g.
                 events.append(("restored", child.serial))
@@ -96,7 +96,7 @@ class SmaStarTest(unittest.TestCase):
             moves, stats = self.solve_counting_nodes(board, start, config)
         self.assertEqual([event for event, _ in events], ["forgotten", "restored"])
         self.assertNotEqual(events[0][1], events[1][1])
-        self.assertEqual(moves, "LDR")
+        self.assertEqual(moves, "RUL")
         self.assertEqual(board.apply_moves(start, moves), board.goal)
         self.assertEqual(stats.peak_stored_states, 4)
 
@@ -135,7 +135,7 @@ class SmaStarTest(unittest.TestCase):
         puzzle = "2 2\n2 0\n1 3\n"
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "stats.json"
-            for flag, limit, output, result in (("-s", 4, "3\nLDR\n", "solved"),
+            for flag, limit, output, result in (("-s", 4, "3\nRUL\n", "solved"),
                                                  ("--sma", 3, "-1\n\n", "not_found")):
                 with self.subTest(limit=limit):
                     args = [flag, "0", "--memory-limit", str(limit), "--stats", str(path)]

@@ -196,8 +196,8 @@ class EdgeCasesTest(unittest.TestCase):
                     moves, stats = run(module, BOARD, BOARD.goal, hid)
                     self.assertEqual(moves, "")
                     self.assertEqual((stats.visited_states, stats.processed_states), (1, 0))
-                    self.assertEqual(run(module, Board(1, 4), (1, 0, 2, 3), hid)[0], "RR")
-                    self.assertEqual(run(module, Board(3, 1), (0, 1, 2), hid)[0], "DD")
+                    self.assertEqual(run(module, Board(1, 4), (1, 0, 2, 3), hid)[0], "LL")
+                    self.assertEqual(run(module, Board(3, 1), (0, 1, 2), hid)[0], "UU")
                     b23 = Board(2, 3)
                     for depth, states in states_by_depth(b23, 21).items():
                         for state in states[:3]:

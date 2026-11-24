@@ -79,8 +79,8 @@ class ExperimentTest(unittest.TestCase):
         stats = self.directory / "stats.json"
         for completed, expected in (
             (subprocess.CompletedProcess([], 2, b"", b"failed"), "error"),
-            (subprocess.CompletedProcess([], 0, b"1\nU\n", b""), "invalid"),
-            (subprocess.CompletedProcess([], 0, b"1\nR\n", b""), "error"),
+            (subprocess.CompletedProcess([], 0, b"1\nD\n", b""), "invalid"),
+            (subprocess.CompletedProcess([], 0, b"1\nL\n", b""), "error"),
         ):
             with self.subTest(expected=expected, completed=completed):
                 with patch.object(experiments.subprocess, "run", return_value=completed):

@@ -90,17 +90,19 @@ FifteenPuzzle/
 - **State:** an immutable `tuple[int, ...]` of length `R*C` in **row-major** order. `0` is the blank.
   Cell index `i` corresponds to `row = i // C`, `col = i % C`.
 - **Goal state:** `1, 2, ..., R*C-1, 0`, so the blank is in the bottom-right corner.
-- **Move semantics:** a move letter describes the movement of the **blank** (empty field):
+- **Move semantics (as in the assignment):** a move letter is the direction in which a **tile**
+  moves into the blank: `L` moves the tile that has the free space on its left. The blank
+  therefore moves the **opposite** way:
 
-  | Letter | Blank moves | Index change | Legal when |
-  |--------|-------------|--------------|------------|
-  | `L` | left  | `i - 1` | `col > 0` |
-  | `R` | right | `i + 1` | `col < C-1` |
-  | `U` | up    | `i - C` | `row > 0` |
-  | `D` | down  | `i + C` | `row < R-1` |
+  | Letter | Tile that moves | Tile moves | Blank moves | Blank index change | Legal when (blank at row, col) |
+  |--------|-----------------|------------|-------------|--------------------|--------------------------------|
+  | `L` | the one right of the blank | left  | right | `i + 1` | `col < C-1` |
+  | `R` | the one left of the blank  | right | left  | `i - 1` | `col > 0` |
+  | `U` | the one below the blank    | up    | down  | `i + C` | `row < R-1` |
+  | `D` | the one above the blank    | down  | up    | `i - C` | `row > 0` |
 
-  Example: if the blank is to the right of tile `5`, then `L` swaps them and the blank ends up
-  where `5` was.
+  Example: for the last row `13 14 0 15`, tile `15` has the free space on its left, so the
+  solution is `L` (15 slides left and the blank ends up in the bottom-right corner).
 - **Opposite moves:** `L↔R`, `U↔D`.
 - **Reverse-move pruning:** ALL strategies MUST skip the successor produced by the move opposite
   to the move that created the current node. The start node has no parent move, so all its legal
@@ -398,7 +400,7 @@ until the previous one is ✅ Done.
   - empty `data/puzzles/`, `results/` and `report/` (each holds a `.gitkeep`)
 - **How it works:**
   - `Board(rows, cols)` holds the geometry. `board.goal` is the goal state. `board.targets[blank][move]`
-    is the precomputed index the blank moves to, or `-1` if the move is illegal. Helpers:
+    is the precomputed index of the tile that slides into the blank (where the blank ends up), or `-1` if the move is illegal. Helpers:
     `board.apply(state, blank, move) -> (state, blank)` (raises `IllegalMoveError`),
     `board.apply_moves(state, moves)`, `board.legal_moves(blank)` (in `LRUD` order) and
     `board.is_goal(state)`. Module-level helpers: `find_blank(state)` and
@@ -495,7 +497,7 @@ until the previous one is ✅ Done.
     - 1×4 and 3×1 boards
     - generator counts `2, 4, 10, 24, 54, 107, 212` and the full 2×3 space (360 states)
   - `python3 tools/generate.py`, then `./solver.py -b RDUL < data/puzzles/4x4_07_00001.txt` gives
-    `7` and `LLLDRRR`.
+    `7` and `RRRULLL` (under the tile-move convention from section 4; it was `LLLDRRR` before the 2026-11-24 change).
   - In WSL, a bash loop ran all 413 puzzles through the CLI and `verify.py`: 0 failures.
 - **Known limitations:**
   - BFS keeps every visited state in memory, so in Python it is practical up to about depth 15–18
@@ -712,7 +714,9 @@ until the previous one is ✅ Done.
   - Run `python3 tools/generate.py` and `python3 tools/run_experiments.py`.
     A separate preflight exercised all six strategies, a forced timeout, and recovery from
     5 committed rows to all 72 expected keys. Changed limits and timeout were refused.
-  - The full WSL run took 32 min 7 s. Independent validation confirmed the Section 10.3
+  - The full WSL run took 32 min 7 s (the 2026-11-23 run). The 2026-11-24 rerun with the new move
+    convention took 1 h 45 min 37 s on a slower laptop (see `results/README.md`). Independent
+    validation of both runs confirmed the Section 10.3
     header and exactly 14868 unique keys with no missing or duplicate rows. Every row is
     `solved` with `verified=true`. There were zero timeouts or other failures.
   - `python3 -m unittest` passes 105 tests on Windows and WSL Ubuntu 22.04 with one optional
@@ -772,3 +776,5 @@ until the previous one is ✅ Done.
 | 2026-11-23 | **M6 Done**. Viewer checked in open Windows Tk windows. Tests 102 pass (+1 slow skipped) on Windows and WSL Ubuntu 22.04. |
 | 2026-11-23 | **M7 Done**. The WSL benchmark completed all 14868 unique combinations with every solution verified. Tests 105 pass (+1 slow skipped) on Windows and WSL Ubuntu 22.04. |
 | 2026-11-23 | **M8 Done**. All figures and the report were checked against the M7 CSV. Verified the six executable Linux solver invocations, the WSL test suite and saved solution playback in WSLg. |
+| 2026-11-24 | **Move convention changed (section 4):** a letter is now the direction the **tile** moves into the blank, as worded in the assignment (`L` = the tile with the free space on its left slides left; the blank moves right). Only `fifteen/board.py` (`targets` table) changed in code; tests with literal move strings were converted (L↔R, U↔D). `tools/generate.py` now pins its BFS order to `RLDU` (blank left, right, up, down), so the 413 generated files are byte-identical to the previous set. **Consequence:** an order string such as `RDUL` now means different physical moves, and the informed strategies' fixed order `LRUD` changes tie-breaking, so `results/results.csv`, `report/figures/` and the numbers in `report/report.md` predate this change and must be regenerated. |
+| 2026-11-24 | **M7/M8 artifacts regenerated after the convention change:** full matrix rerun on WSL Ubuntu 22.04 (Intel i9-8950HK laptop, 1 h 45 min 37 s): 14868/14868 solved and verified, 0 failures. `results/results.csv` and its metadata were replaced (same `puzzles_sha256`); all 24 figures were regenerated with `tools/plot.py`; every number in `report/report.md` and `results/README.md` was recomputed from the new CSV. BFS/DFS/IDFS counts equal the earlier run with mirrored order labels (`L↔R`, `U↔D`). Informed-search counts changed slightly (tie-breaking). Times are about 3.4× longer because of the slower machine. The M1–M4 summaries describe the code as it was then; their example outputs predate the change. |

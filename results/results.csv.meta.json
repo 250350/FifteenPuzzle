@@ -151,8 +151,8 @@
   ],
   "puzzles": 413,
   "puzzles_sha256": "acc1334ed8d9da39143de36372ee19ac6fb036744a879089c46474ace0e8c2c8",
-  "code_sha256": "0276f09c0618149f031756050733c19863a1342639b8f1a16cf52b45cbd936ba",
-  "machine_sha256": "64b2ad239fd817de39622700ffd480a68a0dc3d234a338f1aed097aec9c1ab47",
-  "platform": "Linux 6.6.87.2-microsoft-standard-WSL2 x86_64",
+  "code_sha256": "011bb9687fc4da35952e329bfab07f8566006984b7ffd8d8cde93aa0ee73e34d",
+  "machine_sha256": "1b97d15a2c6a76da45144f490a75d2efbee36d81c3c55a69bd1c6c0c49e14a22",
+  "platform": "Linux 6.6.87.1-microsoft-standard-WSL2 x86_64",
   "python": "CPython 3.10.12"
 }

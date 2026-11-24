@@ -7,8 +7,11 @@ each reachable state its optimal distance ``d``. Every state with
 
     {out}/{R}x{C}_{d:02d}_{k:05d}.txt      (k = 1, 2, ... within each depth)
 
-The order inside a depth is deterministic (BFS with moves in ``LRUD`` order),
-so the same file always holds the same puzzle.
+The order inside a depth is deterministic: the BFS tries the blank directions
+left, right, up, down (move letters ``RLDU``, since letters name the direction
+of the moving tile). This fixed physical order keeps file numbering identical
+to the puzzle set used for the published results, independent of the letter
+convention, so the same file always holds the same puzzle.
 
 Usage::
 
@@ -29,6 +32,8 @@ from fifteen.board import Board, State, find_blank  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUT = ROOT / "data" / "puzzles"
+# Blank goes left, right, up, down = tile moves R, L, D, U (see module docstring).
+GENERATION_ORDER = "RLDU"
 
 
 def states_by_depth(board: Board, max_depth: int) -> Dict[int, List[State]]:
@@ -40,7 +45,9 @@ def states_by_depth(board: Board, max_depth: int) -> Dict[int, List[State]]:
         nxt: List[State] = []
         for state in current:
             blank = find_blank(state)
-            for move in board.legal_moves(blank):
+            for move in GENERATION_ORDER:
+                if board.targets[blank][move] == -1:
+                    continue
                 child, _ = board.apply(state, blank, move)
                 if child not in seen:
                     seen.add(child)

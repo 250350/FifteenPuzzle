@@ -20,8 +20,9 @@ python3 solver.py --help
 
 Strategy flags: `-b/--bfs`, `-d/--dfs`, `-i/--idfs` take an order (a permutation
 of `LRUD`, or `R` for random); `-h/--bf`, `-a/--astar`, `-s/--sma` take a
-heuristic id (0 zero, 1 Hamming, 2 Manhattan, 3 linear conflict). Move letters
-give the direction the blank moves.
+heuristic id (0 zero, 1 Hamming, 2 Manhattan, 3 linear conflict). A move letter
+is the direction a tile slides into the blank (`L` = the tile on the blank's
+right slides left, so the blank moves right).
 
 On Linux, the executable entry point also works directly as
 `./solver.py -b RDUL < puzzle.txt`.

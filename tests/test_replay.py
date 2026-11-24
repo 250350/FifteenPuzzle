@@ -21,9 +21,9 @@ class ReplayTest(unittest.TestCase):
         return load_replay(self.puzzle, self.solution)
 
     def test_every_state_in_rectangular_replay(self):
-        replay = self.load(b"5\r\nLLDRR\r\n")
+        replay = self.load(b"5\r\nRRULL\r\n")
         self.assertEqual((replay.board.rows, replay.board.cols), (2, 3))
-        self.assertEqual(replay.moves, "LLDRR")
+        self.assertEqual(replay.moves, "RRULL")
         self.assertEqual(replay.states, (
             (2, 3, 0, 1, 4, 5),
             (2, 0, 3, 1, 4, 5),
@@ -48,8 +48,8 @@ class ReplayTest(unittest.TestCase):
         for solution, message in (
             (b"2\nL\n", "stated length 2 but 1 moves given"),
             (b"1\nX\n", "invalid move letters"),
-            (b"2\nLU\n", "Illegal move U at step 2"),
-            (b"1\nL\n", "does not reach the goal state"),
+            (b"2\nRD\n", "Illegal move D at step 2"),
+            (b"1\nR\n", "does not reach the goal state"),
             (b"0\n\n", "does not reach the goal state"),
             (b"\xff", "Cannot read solution.txt"),
         ):

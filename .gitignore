@@ -35,3 +35,6 @@ results/*.tmp
 # --- Scratch ---
 tmp/
 scratch/
+
+stat.json
+wynik.txt

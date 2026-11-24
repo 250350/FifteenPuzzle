@@ -139,11 +139,17 @@ class DfsTest(unittest.TestCase):
             expanded[state] = expanded.get(state, 0) + 1
             return _real(board, state, blank, parent_move, moves)
 
+        found_reexpansion = False
         with mock.patch.object(dfs, "expand", spy):
-            moves, _ = dfs.depth_limited_search(BOARD, LAYERS[7][0], 12, make_order("LRUD"),
-                                                SearchStats())
-        self.assertIsNotNone(moves)
-        self.assertTrue(any(count > 1 for count in expanded.values()),
+            for state in LAYERS[7][:20]:
+                for order in ORDERS:
+                    expanded.clear()
+                    moves, _ = dfs.depth_limited_search(BOARD, state, 12, make_order(order),
+                                                        SearchStats())
+                    self.assertIsNotNone(moves)
+                    if any(count > 1 for count in expanded.values()):
+                        found_reexpansion = True
+        self.assertTrue(found_reexpansion,
                         "expected at least one state re-expanded at a smaller depth")
 
         # 2) Behavioural: a plain visited set misses solutions within the limit
@@ -199,8 +205,8 @@ class EdgeCasesTest(unittest.TestCase):
                 self.assertEqual(moves, "")
                 self.assertEqual((stats.visited_states, stats.processed_states), (1, 0))
                 self.assertIsNone(run(module, BOARD, LAYERS[3][0], max_depth=0)[0])
-                self.assertEqual(run(module, Board(1, 4), (1, 0, 2, 3))[0], "RR")
-                self.assertEqual(run(module, Board(3, 1), (0, 1, 2))[0], "DD")
+                self.assertEqual(run(module, Board(1, 4), (1, 0, 2, 3))[0], "LL")
+                self.assertEqual(run(module, Board(3, 1), (0, 1, 2))[0], "UU")
                 b23 = Board(2, 3)
                 for depth, states in states_by_depth(b23, 21).items():
                     for state in states[:5]:

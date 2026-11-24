@@ -12,7 +12,9 @@ DFS, while the heuristic changed how much work the informed searches did.
 
 A state is a row-major tuple of the tiles and the blank, represented by zero.
 The goal is `1, 2, …, 15, 0`. A move swaps the blank with an orthogonal
-neighbour at unit cost. Its letter names the direction of the blank.
+neighbour at unit cost. As in the assignment, its letter names the direction
+in which the tile slides into the blank: `L` moves the tile that has the
+free space on its left, so the blank itself moves right.
 A 4×4 board has two legal moves at a corner, three at a non-corner edge and
 four in the interior. After the first move the solver omits the immediate
 reverse move, leaving at most three successors before duplicate handling.
@@ -60,7 +62,8 @@ Manhattan.
 All searches use the shared board geometry, neighbour tables and parity
 check. Parent pointers and move letters reconstruct the path. BFS, DFS and
 IDFS test for the goal at generation. The three informed searches test on
-selection and generate legal successors in `LRUD` order. Resident informed
+selection and generate legal successors in `LRUD` letter order (tile
+directions). Resident informed
 frontiers use lower `f`, then lower `h`, then insertion order to break ties.
 SMA* generates one successor at a time. At capacity it forgets the
 highest-bound, shallowest eligible leaf and records the bound at its
@@ -84,8 +87,8 @@ orders listed in the results table. Best-first, A* and SMA* each ran the
 four heuristic IDs. The timeout was 60 seconds per subprocess. DFS and
 IDFS used a depth limit of 20 and SMA* used a 100,000-node cap.
 
-The single-machine run used an Intel Core i5-13600KF, WSL 2 with Ubuntu
-22.04.5 LTS, and CPython 3.10.12. WSL reported 20 logical CPUs and about
+The single-machine run used an Intel Core i9-8950HK laptop, WSL 2 with Ubuntu
+22.04.5 LTS, and CPython 3.10.12. WSL reported 12 logical CPUs and about
 15 GiB of visible memory. The runner executed one
 solver process at a time. The archived run record includes the timing
 boundaries and validation. [Measurement record](../results/README.md)
@@ -115,22 +118,22 @@ different numbers of configurations in the strategy groups.
 
 | Strategy | Attempts | Length = depth | Mean length (moves) | Largest excess (moves) | Mean search (ms) |
 |---|---:|---:|---:|---:|---:|
-| BFS | 3,304 | 3,304 | 6.131 | 0 | 0.252 |
-| DFS | 3,304 | 112 | 17.866 | 16 | 413.715 |
-| IDFS | 3,304 | 3,304 | 6.131 | 0 | 0.475 |
-| Best-first | 1,652 | 1,650 | 6.153 | 18 | 0.238 |
-| A* | 1,652 | 1,652 | 6.131 | 0 | 0.242 |
-| SMA* | 1,652 | 1,652 | 6.131 | 0 | 1.120 |
+| BFS | 3,304 | 3,304 | 6.131 | 0 | 1.058 |
+| DFS | 3,304 | 112 | 17.866 | 16 | 1,414.719 |
+| IDFS | 3,304 | 3,304 | 6.131 | 0 | 1.917 |
+| Best-first | 1,652 | 1,650 | 6.153 | 18 | 1.047 |
+| A* | 1,652 | 1,652 | 6.131 | 0 | 1.021 |
+| SMA* | 1,652 | 1,652 | 6.131 | 0 | 4.888 |
 
 ![Mean search time by strategy at each optimal depth, with a logarithmic millisecond axis](figures/time_ms_strategies.png)
 
-The search phase totalled 1,371.961 seconds across all rows. DFS accounted
-for 1,366.915 seconds, about 99.6% of that total. The full benchmark took
-32 minutes 7 seconds. At depth 7, IDFS generated 797.7 nodes and retained
+The search phase totalled 4,695.553 seconds across all rows. DFS accounted
+for 4,674.233 seconds, about 99.5% of that total. The full benchmark took
+1 hour 45 minutes 37 seconds. At depth 7, IDFS generated 797.7 nodes and retained
 a peak of 354.6 states on average, while BFS generated 424.9 nodes and
 retained a peak of 419.4. DFS reached a mean maximum depth of 19.910 at
 the same optimal depth under the 20-move limit. The highest observed
-SMA* storage count was 1,534 nodes.
+SMA* storage count was 1,535 nodes.
 
 ### Fixed move orders
 
@@ -140,19 +143,19 @@ The DFS columns compare path quality and search time for each order.
 
 | Order | BFS generated (mean) | IDFS generated (mean) | DFS optimal / 413 | DFS mean length (moves) | DFS mean search (ms) |
 |---|---:|---:|---:|---:|---:|
-| RDUL | 287.9 | 541.3 | 21 | 17.346 | 392.934 |
-| RDLU | 287.9 | 541.4 | 20 | 17.424 | 401.977 |
-| DRUL | 287.9 | 541.4 | 20 | 17.424 | 403.123 |
-| DRLU | 287.9 | 541.3 | 21 | 17.346 | 388.785 |
-| LUDR | 278.6 | 518.3 | 8 | 18.354 | 426.196 |
-| LURD | 278.6 | 518.4 | 7 | 18.339 | 434.663 |
-| ULDR | 278.6 | 518.4 | 7 | 18.339 | 436.381 |
-| ULRD | 278.6 | 518.3 | 8 | 18.354 | 425.663 |
+| RDUL | 278.6 | 518.3 | 8 | 18.354 | 1,465.147 |
+| RDLU | 278.6 | 518.4 | 7 | 18.339 | 1,506.477 |
+| DRUL | 278.6 | 518.4 | 7 | 18.339 | 1,504.932 |
+| DRLU | 278.6 | 518.3 | 8 | 18.354 | 1,440.792 |
+| LUDR | 287.9 | 541.3 | 21 | 17.346 | 1,312.791 |
+| LURD | 287.9 | 541.4 | 20 | 17.424 | 1,372.695 |
+| ULDR | 287.9 | 541.4 | 20 | 17.424 | 1,397.580 |
+| ULRD | 287.9 | 541.3 | 21 | 17.346 | 1,317.343 |
 
-The last four orders generated fewer nodes in BFS and IDFS on average.
-For DFS, RDUL and DRLU had the shortest mean solutions and the most
-optimal results. DRLU also had the lowest measured mean search time
-among the DFS orders.
+The first four orders, which try tile moves `R` and `D` first, generated
+fewer nodes in BFS and IDFS on average. For DFS the pattern reverses: LUDR
+and ULRD had the shortest mean solutions and the most optimal results, and
+LUDR also had the lowest measured mean search time among the DFS orders.
 
 ### Heuristic comparisons
 
@@ -162,18 +165,18 @@ board whose optimal length was 7.
 
 | Strategy | Heuristic | Optimal / 413 | Mean expanded nodes | Mean search (ms) |
 |---|---|---:|---:|---:|
-| Best-first | 0 Zero | 413 | 277.906 | 0.634 |
-| Best-first | 1 Hamming | 411 | 15.230 | 0.073 |
-| Best-first | 2 Manhattan | 413 | 6.404 | 0.067 |
-| Best-first | 3 Linear conflict | 413 | 6.395 | 0.178 |
-| A* | 0 Zero | 413 | 277.906 | 0.673 |
-| A* | 1 Hamming | 413 | 7.177 | 0.046 |
-| A* | 2 Manhattan | 413 | 6.312 | 0.069 |
-| A* | 3 Linear conflict | 413 | 6.312 | 0.180 |
-| SMA* | 0 Zero | 413 | 281.661 | 3.984 |
-| SMA* | 1 Hamming | 413 | 7.177 | 0.126 |
-| SMA* | 2 Manhattan | 413 | 6.312 | 0.137 |
-| SMA* | 3 Linear conflict | 413 | 6.312 | 0.231 |
+| Best-first | 0 Zero | 413 | 280.329 | 2.802 |
+| Best-first | 1 Hamming | 411 | 15.230 | 0.287 |
+| Best-first | 2 Manhattan | 413 | 6.630 | 0.299 |
+| Best-first | 3 Linear conflict | 413 | 6.620 | 0.799 |
+| A* | 0 Zero | 413 | 280.329 | 2.790 |
+| A* | 1 Hamming | 413 | 7.172 | 0.194 |
+| A* | 2 Manhattan | 413 | 6.508 | 0.301 |
+| A* | 3 Linear conflict | 413 | 6.508 | 0.798 |
+| SMA* | 0 Zero | 413 | 284.240 | 17.629 |
+| SMA* | 1 Hamming | 413 | 7.172 | 0.484 |
+| SMA* | 2 Manhattan | 413 | 6.508 | 0.529 |
+| SMA* | 3 Linear conflict | 413 | 6.508 | 0.909 |
 
 ![Mean expanded nodes by order for BFS, DFS and IDFS, and by heuristic for Best-first, A* and SMA*](figures/processed_states_parameters.png)
 
@@ -204,8 +207,8 @@ therefore includes substantially more than the current path. Its longer
 legal solutions and higher search cost are associated with exploring
 almost to the depth cap on many shallow puzzles.
 
-At optimal depth 7, A* with zero expanded 414.118 nodes on average,
-compared with 8.675 for Hamming and 7.307 for both Manhattan and linear
+At optimal depth 7, A* with zero expanded 422.274 nodes on average,
+compared with 8.665 for Hamming and 7.613 for both Manhattan and linear
 conflict. SMA* showed the same means for the three nonzero heuristics.
 Linear conflict required more search time than Manhattan in all three
 informed strategies on these boards. The extra conflict computation
@@ -213,7 +216,7 @@ coincided with little or no reduction in expanded nodes. The timing
 does not isolate the cost of heuristic evaluation, and the small
 absolute differences between sub-millisecond means are machine-specific.
 
-The 100,000-node cap was far above SMA*'s observed peak of 1,534.
+The 100,000-node cap was far above SMA*'s observed peak of 1,535.
 This experiment measures the implementation under that limit and cannot
 estimate the cost of eviction and restoration under tighter memory.
 The dataset covers shallow positions only. It supplies neither a

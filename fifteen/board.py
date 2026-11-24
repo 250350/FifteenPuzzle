@@ -1,8 +1,9 @@
 """Board geometry, goal state and move semantics for the R x C sliding puzzle.
 
 A state is an immutable tuple of length ``rows * cols`` in row-major order, where
-``0`` is the blank. Move letters describe the direction in which the **blank**
-moves (CONTRACT.md, section 4).
+``0`` is the blank. A move letter is the direction in which a **tile** moves into
+the blank (CONTRACT.md, section 4): ``L`` slides the tile on the blank's right
+to the left, so the blank itself moves right.
 """
 
 from __future__ import annotations
@@ -16,7 +17,8 @@ OPPOSITE: Dict[str, str] = {"L": "R", "R": "L", "U": "D", "D": "U"}
 
 
 class IllegalMoveError(ValueError):
-    """Raised when a move would push the blank outside the frame."""
+    """Raised when no tile can move in the given direction (the blank is on
+    that side of the frame)."""
 
 
 class Board:
@@ -26,8 +28,9 @@ class Board:
         rows, cols: frame dimensions.
         size: ``rows * cols``.
         goal: goal state ``(1, 2, ..., size-1, 0)``.
-        targets: ``targets[blank][move]`` is the index the blank moves to, or
-            ``-1`` if the move is illegal for that blank position.
+        targets: ``targets[blank][move]`` is the index of the tile that moves
+            into the blank (i.e. where the blank ends up), or ``-1`` if the
+            move is illegal for that blank position.
     """
 
     __slots__ = ("rows", "cols", "size", "goal", "targets")
@@ -44,12 +47,15 @@ class Board:
         )
 
     def _compute_targets(self, index: int) -> Dict[str, int]:
+        # Letters name the direction of the moving TILE: the tile on the blank's
+        # right moves Left, the tile on its left moves Right, the tile below
+        # moves Up and the tile above moves Down.
         row, col = divmod(index, self.cols)
         return {
-            "L": index - 1 if col > 0 else -1,
-            "R": index + 1 if col < self.cols - 1 else -1,
-            "U": index - self.cols if row > 0 else -1,
-            "D": index + self.cols if row < self.rows - 1 else -1,
+            "L": index + 1 if col < self.cols - 1 else -1,
+            "R": index - 1 if col > 0 else -1,
+            "U": index + self.cols if row < self.rows - 1 else -1,
+            "D": index - self.cols if row > 0 else -1,
         }
 
     def __repr__(self) -> str:
